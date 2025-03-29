@@ -1,6 +1,16 @@
 from flask import Flask,request,render_template
+import sqlite3
+import datetime
+import google.generativeai as genai
+import os
+
+api = "AIzaSyAVahZgKkaXbwgq45d0dafLfckSGsKQ7s8"
+model = genai.GenerativeModel("gemini-1.5-flash")
+genai.configure(api_key=api)
 
 app = Flask(__name__)
+
+flag = 1
 
 @app.route("/",methods=["POST","GET"])
 def index():
@@ -8,7 +18,17 @@ def index():
 
 @app.route("/main",methods=["POST","GET"])
 def main():
-    user_name = request.form.get("q")
+    global flag
+    if flag == 1:
+        t = datetime.datetime.now()
+        user_name = request.form.get("q")
+        conn = sqlite3.connect('user.db')
+        c = conn.cursor()
+        c.execute("insert into user (name, timestamp) values (?,?)", (user_name, t))
+        conn.commit()
+        c.close()
+        conn.close
+        flag = 0
     return(render_template("main.html"))
 
 @app.route("/foodexp",methods=["POST","GET"])
@@ -32,5 +52,37 @@ def test_result():
     elif answer=="true":
         return(render_template("fail.html"))
     
+@app.route("/FAQ",methods=["POST","GET"])
+def FAQ():
+    return(render_template("FAQ.html"))
+
+@app.route("/FAQ1",methods=["POST","GET"])
+def FAQ1():
+    r = model.generate_content("Factors for Profit")
+    return(render_template("FAQ1.html",r=r.candidates[0].content.parts[0]))
+
+@app.route("/userLog",methods=["POST","GET"])
+def userLog():
+    conn = sqlite3.connect('user.db')
+    c = conn.cursor()
+    c.execute("select * from user")
+    r = ""
+    for row in c:
+        r = r + str(row) + "\n"
+    print(r)
+    c.close()
+    conn.close
+    return(render_template("userLog.html",r=r))
+
+@app.route("/deleteLog",methods=["POST","GET"])
+def deleteLog():
+    conn = sqlite3.connect('user.db')
+    c = conn.cursor()
+    c.execute("delete from user")
+    conn.commit()
+    c.close()
+    conn.close
+    return(render_template("deleteLog.html"))
+
 if __name__ == "__main__":
     app.run()
