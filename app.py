@@ -4,10 +4,16 @@ import datetime
 import google.generativeai as genai
 import os
 import wikipedia
+import time, requests
+import threading
 
 api = os.getenv("makersuite")
 model = genai.GenerativeModel("gemini-1.5-flash")
 genai.configure(api_key=api)
+
+TOKEN = '7592004244:AAHzhUteT37T-PSupqKQmwsXF5kD0StjwgY'
+BASE_URL = f"http://api.telegram.org/bot{TOKEN}/"
+last_processed_id = 0
 
 app = Flask(__name__)
 
@@ -99,5 +105,52 @@ def deleteLog():
     conn.close
     return(render_template("deleteLog.html"))
 
-if __name__ == "__main__":
-    app.run()
+@app.route('/telegram', methods=['GET', 'POST'])
+def telegram():
+    global last_processed_id
+    
+    response = requests.get(BASE_URL + 'getUpdates')
+    data = response.json()
+    
+    try:
+        last_message = data['result'][-1]['message']
+        chat_id = last_message['chat']['id']
+        last_processed_id = last_message['message_id']
+        
+        welcome_text = "Welcome to the food expenditure prediction. Please enter your income:"
+        requests.get(BASE_URL + f'sendMessage?chat_id={chat_id}&text={welcome_text}')
+        
+        while True:
+            time.sleep(3)  
+            response = requests.get(BASE_URL + 'getUpdates')
+            data = response.json()
+            
+            if not data.get('result'):
+                continue
+                
+            last_message = data['result'][-1]['message']
+            current_msg_id = last_message['message_id']
+            
+            if current_msg_id > last_processed_id:
+                last_processed_id = current_msg_id
+                text = last_message.get('text', '')
+                
+                try:
+                    income = float(text)
+                    prediction = round((income * 0.4851) + 147.4, 2)
+                    reply = f"Your predicted food expenditure is {prediction}\n\nType another number to predict again, or 'exit' to end."
+                    requests.get(BASE_URL + f'sendMessage?chat_id={chat_id}&text={reply}')
+                except ValueError:
+                    if text.lower() == 'exit':
+                        requests.get(BASE_URL + f'sendMessage?chat_id={chat_id}&text="Goodbye!"')
+                        break
+                    reply = "Invalid input. Please enter a valid number for income:"
+                    requests.get(BASE_URL + f'sendMessage?chat_id={chat_id}&text={reply}')
+    
+    except (KeyError, IndexError) as e:
+        return f"No valid message found. Error: {str(e)}"
+    
+    return render_template("telegram.html")
+
+if __name__ == '__main__':
+    app.run(debug=True)
