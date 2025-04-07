@@ -5,7 +5,6 @@ import google.generativeai as genai
 import os
 import wikipedia
 import time, requests
-import threading
 
 api = os.getenv("makersuite")
 model = genai.GenerativeModel("gemini-1.5-flash")
@@ -106,7 +105,11 @@ def deleteLog():
     return(render_template("deleteLog.html"))
 
 @app.route('/telegram', methods=['GET', 'POST'])
-def telegram():
+def telegram_intermediate():
+    return render_template("telegram_start.html")
+
+@app.route('/start_telegram_chat', methods=['GET', 'POST'])
+def start_telegram_chat():
     global last_processed_id
     
     response = requests.get(BASE_URL + 'getUpdates')
@@ -121,7 +124,7 @@ def telegram():
         requests.get(BASE_URL + f'sendMessage?chat_id={chat_id}&text={welcome_text}')
         
         while True:
-            time.sleep(3)  
+            time.sleep(5)  
             response = requests.get(BASE_URL + 'getUpdates')
             data = response.json()
             

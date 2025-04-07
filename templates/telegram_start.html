@@ -1,0 +1,14 @@
+<!-- telegram_start.html -->
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="container">
+    <h1>Welcome to predict your food expenditure via our telegram bot</h1>
+    <p>Please send any message to <a href="https://t.me/nabillon23bot" target="_blank">t.me/nabillon23bot</a> on Telegram first, then click the button below to start</p>
+    <form action="/start_telegram_chat" method="POST">
+        <input type="submit" value="Start Chat">
+    </form>
+</div>
+</body>
